@@ -4,6 +4,7 @@
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "MyAbilitySystemComponent.h"
 #include "MyAttributeSet.h"
+#include "MyGameplayAbility.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -82,6 +83,18 @@ void AGASUnrealProjectCharacter::SetupPlayerInputComponent(class UInputComponent
 
 	// VR headset functionality
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AGASUnrealProjectCharacter::OnResetVR);
+	
+	if(AbilitySystemComponent && InputComponent)
+	{
+		const FGameplayAbilityInputBinds InputBinds(
+			"Confirm",
+			"Cancel",
+			"EGASAbilityInputID",
+			static_cast<int32>(EGASAbilityInputID::Confirm),
+			static_cast<int32>(EGASAbilityInputID::Cancel));
+		
+		AbilitySystemComponent->BindAbilityActivationToInputComponent(InputComponent, InputBinds);
+	}
 }
 
 
@@ -114,6 +127,7 @@ void AGASUnrealProjectCharacter::PossessedBy(AController* NewController)
 	AbilitySystemComponent->InitAbilityActorInfo(this,this);
 
 	InitAttributes();
+	InitDefaultAbilities();
 }
 
 void AGASUnrealProjectCharacter::OnRep_PlayerState()
@@ -123,6 +137,31 @@ void AGASUnrealProjectCharacter::OnRep_PlayerState()
 	AbilitySystemComponent->InitAbilityActorInfo(this,this);
 
 	InitAttributes();
+
+	if(AbilitySystemComponent && InputComponent)
+	{
+		const FGameplayAbilityInputBinds InputBinds(
+			"Confirm",
+			"Cancel",
+			"EGASAbilityInputID",
+			static_cast<int32>(EGASAbilityInputID::Confirm),
+			static_cast<int32>(EGASAbilityInputID::Cancel));
+		
+		AbilitySystemComponent->BindAbilityActivationToInputComponent(InputComponent, InputBinds);
+	}
+}
+
+void AGASUnrealProjectCharacter::InitDefaultAbilities()
+{
+	if(HasAuthority() && AbilitySystemComponent)
+	{
+		for(TSubclassOf<UMyGameplayAbility>& Ability : DefaultAbilities)
+		{
+			int32 InputID = static_cast<int32>(Ability.GetDefaultObject()->AbilityInputID);
+			
+			AbilitySystemComponent-> GiveAbility(FGameplayAbilitySpec(Ability, 1, InputID, this));
+		}
+	}
 }
 
 void AGASUnrealProjectCharacter::OnResetVR()

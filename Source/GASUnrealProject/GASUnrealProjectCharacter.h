@@ -51,6 +51,8 @@ public:
 
 	virtual void OnRep_PlayerState() override;
 
+	virtual void InitDefaultAbilities();
+
 protected:
 	/** Resets HMD orientation in VR. */
 	void OnResetVR();

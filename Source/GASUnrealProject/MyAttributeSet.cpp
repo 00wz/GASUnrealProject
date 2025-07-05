@@ -26,7 +26,7 @@ void UMyAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, fl
 	{
 		UAbilitySystemComponent* AbilityComponent = GetOwningAbilitySystemComponent();
 
-		const float CurrentMaxHealth = MaxHealth.GetCurrentValue();
+		const float CurrentMaxHealth = MaxHealth.GetCurrentValue() == 0 ? NewValue : MaxHealth.GetCurrentValue() ;
 
 		if(!FMath::IsNearlyEqual(NewValue, CurrentMaxHealth) && AbilityComponent)
 		{
