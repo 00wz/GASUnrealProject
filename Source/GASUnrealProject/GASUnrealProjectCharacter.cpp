@@ -2,6 +2,8 @@
 
 #include "GASUnrealProjectCharacter.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
+#include "MyAbilitySystemComponent.h"
+#include "MyAttributeSet.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -45,6 +47,12 @@ AGASUnrealProjectCharacter::AGASUnrealProjectCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
+
+	AbilitySystemComponent = CreateDefaultSubobject<UMyAbilitySystemComponent>("AbilitySystem");
+	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
+
+	Attributes = CreateDefaultSubobject<UMyAttributeSet>("Attributes");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -76,6 +84,46 @@ void AGASUnrealProjectCharacter::SetupPlayerInputComponent(class UInputComponent
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AGASUnrealProjectCharacter::OnResetVR);
 }
 
+
+UAbilitySystemComponent* AGASUnrealProjectCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
+}
+
+// Initialize Attributes
+void AGASUnrealProjectCharacter::InitAttributes()
+{
+	if(AbilitySystemComponent && DefaultAttributeEffect)
+	{
+		FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+		EffectContext.AddSourceObject(this);
+
+		FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(DefaultAttributeEffect, 1, EffectContext);
+
+		if(SpecHandle.IsValid())
+		{
+			FActiveGameplayEffectHandle GEHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+		}
+	}
+}
+
+void AGASUnrealProjectCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	AbilitySystemComponent->InitAbilityActorInfo(this,this);
+
+	InitAttributes();
+}
+
+void AGASUnrealProjectCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	AbilitySystemComponent->InitAbilityActorInfo(this,this);
+
+	InitAttributes();
+}
 
 void AGASUnrealProjectCharacter::OnResetVR()
 {
